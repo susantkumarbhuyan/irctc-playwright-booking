@@ -103,7 +103,7 @@ export const passenger_data = {
 Execute the Node.js script to start the booking process:
 
 ```bash
-node your-script-file.js
+node irctcBooking.playwright.js
 ```
 
 ---
