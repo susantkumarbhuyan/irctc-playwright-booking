@@ -2,10 +2,10 @@ export const passenger_data = {
   USERNAME: "your_username",
   PASSWORD: "your_password",
   MANUAL_CAPTCHA: false,
-  TRAIN_NO: "22883",
+  TRAIN_NO: "18463",
   TRAIN_COACH: "3A", // Select from VALID_BOOKING_TYPE
-  TRAVEL_DATE: "07/03/2025", // Follow the format DD/MM/YYYY
-  DATE: "07",
+  TRAVEL_DATE: "15/03/2025", // Follow the format DD/MM/YYYY
+  DATE: "15",
   MONTH: "Mar", // Copy the month (e.g., Apr, May)
   SOURCE_STATION: "BRAHMAPUR - BAM (BRAHMAPUR)",
   DESTINATION_STATION: "KRISHNARAJAPURM - KJM",

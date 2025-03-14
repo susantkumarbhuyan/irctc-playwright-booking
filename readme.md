@@ -15,28 +15,48 @@ Before running the project, ensure the following are installed on your system:
 
 ## Installation Steps
 
-### 1. Install Python and pip
-After installing Python, ensure `pip` is installed. If not, install it using the following command:
+# IRCTC Captcha Solver Setup Guide
+
+## 1. Install Python and pip
+Ensure Python is installed on your system. If `pip` is missing, install it using:
 
 ```bash
 sudo apt-get install python3-pip -y
 ```
 
-### 2. Install Python Dependencies
-Navigate to the project folder and install the required Python dependencies:
+## 2. Create and Activate a Virtual Environment
+Navigate to the project folder and create a virtual environment named `myenv`:
 
 ```bash
-pip install -r /src/irctc-captcha-solver/requirements.txt
+python3 -m venv myenv
 ```
 
-### 3. Verify the Captcha Solver
+### Activate the Virtual Environment:
+- **Linux/macOS:**
+  ```bash
+  source myenv/bin/activate
+  ```
+- **Windows (Command Prompt):**
+  ```cmd
+  myenv\Scripts\activate
+  ```
+
+## 3. Install Python Dependencies
+Once the virtual environment is activated, install the required dependencies:
+
+```bash
+pip install -r irctc-captcha-solver/requirements.txt
+```
+
+## 4. Verify the Captcha Solver
 Run the Python captcha solver server to ensure it works correctly:
 
 ```bash
-python /src/irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5001
+python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5001
 ```
 
-Test the server using `curl`:
+### Test the Server
+Use `curl` to verify the API is running:
 
 ```bash
 curl -X POST "http://localhost:5001/extract-text" \
@@ -46,8 +66,7 @@ curl -X POST "http://localhost:5001/extract-text" \
     }'
 ```
 
-You should receive the following output:
-
+### Expected Response:
 ```json
 {"error":"No base64 image string provided"}
 ```
