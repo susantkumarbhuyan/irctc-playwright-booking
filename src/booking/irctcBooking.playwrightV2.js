@@ -3,55 +3,23 @@ import { passenger_data } from '../booking/data/passenger_data.js';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import axios from "axios";
+import { delay, log, parseTravelDate } from './BuildConfig.js';
+import { BUILD_CONFIG, BuildConfig, monthNames } from './utils.js';
 
 dayjs.extend(customParseFormat);
 
-const LogType = {
-    TESTING: "testing",
-    DEV: "dev",
-    LIVE: "live"
-}
+const { USERNAME, PASSWORD, SOURCE_STATION, DESTINATION_STATION,
+    TRAIN_NO, TRAIN_COACH, TRAVEL_DATE, PASSENGER_DETAILS,
+    BOOKING_TYPE, UPI_ID } = passenger_data;
 
-const LOG_TYPE = LogType.TESTING;
+const { DATE, MONTH } = parseTravelDate(TRAVEL_DATE);
 
-const {
-    USERNAME,
-    PASSWORD,
-    SOURCE_STATION,
-    DESTINATION_STATION,
-    TRAIN_NO,
-    TRAIN_COACH,
-    TRAVEL_DATE,
-    PASSENGER_DETAILS,
-    DATE,
-    MONTH,
-    BOOKING_TYPE,
-    UPI_ID
-} = passenger_data;
-
-
-const upiRegex = /^[a-zA-Z0-9]+@[a-zA-Z0-9.]+$/;
-const isValidUpiId = upiRegex.test(UPI_ID);
-
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Tatkal timings
-const tatkalOpenTimings = {
-    "2A": "10:00",
-    "3A": "10:00",
-    "3E": "10:00",
-    "1A": "10:00",
-    "CC": "10:00",
-    "EC": "10:00",
-    "2S": "11:00",
-    "SL": "11:00",
-};
-
-
-// Utility functions
-function formatDate(inputDate) {
-    return dayjs(inputDate, 'DD/MM/YYYY').format('ddd, DD MMM');
+if (BUILD_CONFIG === BuildConfig.LIVE) {
+    await waitForTatkalOpen(TRAIN_COACH);
+} else if (BUILD_CONFIG === BuildConfig.DEV) {
+    await bookTatkalTicketV2();
+} else {
+    await bookTatkalTicketV2();
 }
 
 function hasTatkalAlreadyOpened(TRAIN_COACH) {
@@ -66,21 +34,15 @@ function tatkalOpenTimeForToday(TRAIN_COACH) {
     return `${openTime}`;
 }
 
-// await waitForTatkalOpen(TRAIN_COACH);
-
-await bookTatkalTicketV2();
-
 export async function waitForTatkalOpen(TRAIN_COACH) {
     if (!hasTatkalAlreadyOpened(TRAIN_COACH)) {
         const exactTimeToOpen = tatkalOpenTimeForToday(TRAIN_COACH);
         console.log(`Waiting for Tatkal opening at ${exactTimeToOpen}...`);
-
         while (!hasTatkalAlreadyOpened(TRAIN_COACH)) {
             await delay(1000); // Wait 1 second before checking again
         }
-
         console.log("Tatkal booking is now open!");
-        await bookTatkalTicket();
+        await bookTatkalTicketV2();
     } else {
         console.log("Tatkal booking is already open.");
     }
@@ -108,17 +70,15 @@ async function bookTatkalTicketV2() {
         page.on('framenavigated', async (frame) => {
             const url = frame.url();
             if (frame === page.mainFrame()) {
-
-                // await page.waitForFunction(() => !document.body.innerText.includes('Please wait'), { timeout: 15000 });
-
                 switch (true) {
                     case url.includes('/train-search') && !isTrainSearchHandled:
                         isTrainSearchHandled = true;
                         console.log('fillJournyDetils', url);
-                        await fillJournyDetils(page, TEN_SECOND, SCREEN_WAITING_TIME);
+                        // await fillJournyDetils(page, TEN_SECOND, SCREEN_WAITING_TIME);
                         break;
                     case url.includes('/train-list'):
                         console.log('selectTrainCoach', url);
+                        await waitForLoaderRemove(page);
                         await selectTrainCoach(page, SCREEN_WAITING_TIME, TEN_SECOND);
                         break;
 
@@ -148,7 +108,7 @@ async function bookTatkalTicketV2() {
 
         listenForPopup(page, 'app-login', 'Login', TEN_SECOND, SCREEN_WAITING_TIME);
         await page.goto('https://www.irctc.co.in/nget/train-search');
-
+        await fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME);
     } catch (error) {
         console.error("ERROR - SECTION 1 : Continue BTN CLick", error)
     }
@@ -156,17 +116,150 @@ async function bookTatkalTicketV2() {
 async function listenForPopup(page, selector, popupType, TEN_SECOND, SCREEN_WAITING_TIME) {
     while (true) {
         await page.waitForSelector(selector, { state: 'attached', timeout: 0 });  // No timeout
-        console.log(`🔥 ${popupType} popup detected!`);
+        console.log(`✅ ${popupType} popup detected!`);
         await fillLoginDetails(page, TEN_SECOND);
         await page.waitForSelector(selector, { state: 'detached', timeout: 0 });  // No timeout
         console.log(`❌ ${popupType} popup closed!`);
         const currentUrl = page.url(); // Get the current URL
         if (currentUrl.includes("/train-search")) {
-            console.log(`Currect URl: ${currentUrl} popup closed!`);
-            await fillJournyDetils(page, TEN_SECOND, SCREEN_WAITING_TIME);
+            isTrainSearchHandled = false;
+            console.log(`Currect URL: ${currentUrl} popup closed!`);
+            await fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME);
         }
     }
 }
+
+async function waitForLoaderRemove(page) {
+    const preloader = page.locator('div#loader');
+    console.log(`Loader detected!`);
+
+    // Check if the preloader is visible before waiting for it to be detached
+    if (await preloader.isVisible()) {
+        await preloader.waitFor({ state: 'detached', timeout: 0 }); // Infinite wait
+        console.log(`Loader closed!`);
+    }
+
+}
+
+async function fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME) {
+    try {
+        await waitForLoaderRemove(page);
+        // Wait for the origin autocomplete to be visible
+        await page.waitForSelector('p-autocomplete[formcontrolname="origin"]', { timeout: SCREEN_WAITING_TIME });
+
+        // Fill and select origin station
+        await fillAndSelectAutocomplete(page, 'p-autocomplete[formcontrolname="origin"]', SOURCE_STATION, TEN_SECOND);
+
+        // Fill and select destination station
+        await fillAndSelectAutocomplete(page, 'p-autocomplete[formcontrolname="destination"]', DESTINATION_STATION, TEN_SECOND);
+
+        // Select date
+        await selectDate(page);
+
+        // Select journey class
+        await selectDropdownOption(page, 'p-dropdown#journeyClass', TRAIN_COACH, TEN_SECOND);
+
+        // Select journey quota
+        await selectDropdownOption(page, 'p-dropdown#journeyQuota', BOOKING_TYPE, TEN_SECOND);
+
+        // Submit the form
+        await page.click('button[type="submit"]', { timeout: TEN_SECOND });
+    } catch (e) {
+        log(`ERROR - SECTION : 1 - Fill Source-Destination ${e}`);
+        console.error("ERROR - SECTION : 1 - Fill Source-Destination", e);
+    }
+}
+
+async function fillAndSelectAutocomplete(page, selector, value, timeout) {
+    const autocomplete = page.locator(selector);
+    await autocomplete.locator('input').fill(value, { timeout });
+    await autocomplete.locator('.ui-autocomplete-items li:first-child').waitFor({ timeout });
+    await autocomplete.locator('.ui-autocomplete-items li:first-child').click();
+}
+
+async function selectDropdownOption(page, dropdownSelector, optionText, timeout) {
+    // Open the dropdown
+    await page.waitForSelector(`${dropdownSelector} div.ui-dropdown-trigger`, { timeout });
+    await page.click(`${dropdownSelector} div.ui-dropdown-trigger`, { timeout });
+
+    // Wait for the dropdown options to appear
+    await page.waitForSelector(`${dropdownSelector} .ui-dropdown-items-wrapper`, { state: 'visible', timeout });
+
+    // Select the desired option
+    const options = page.locator(`${dropdownSelector} .ui-dropdown-item`);
+    await options.first().waitFor({ state: 'attached' });
+
+    const optionCount = await options.count();
+    for (let i = 0; i < optionCount; i++) {
+        const option = options.nth(i);
+        const text = await option.innerText();
+        if (text.includes(optionText)) {
+            await option.click({ timeout });
+            break;
+        }
+    }
+}
+async function selectDate(page) {
+    const [targetDay, targetMonth, targetYear] = TRAVEL_DATE.split('/');
+
+    // Convert month number to month name (e.g., "03" -> "March")
+    const targetMonthName = monthNames[parseInt(targetMonth) - 1];
+
+    // Open the date picker
+    await page.click('p-calendar input');
+
+    // Function to navigate to the desired month and year
+    const navigateToTargetDate = async () => {
+        let currentMonth = await page.textContent('.ui-datepicker-month');
+        let currentYear = await page.textContent('.ui-datepicker-year');
+
+        while (currentMonth !== targetMonthName || currentYear !== targetYear) {
+            if (targetYear > currentYear || (targetYear === currentYear && monthNames.indexOf(targetMonthName) > monthNames.indexOf(currentMonth))) {
+                await page.click('.ui-datepicker-next');
+            } else {
+                await page.click('.ui-datepicker-prev');
+            }
+            currentMonth = await page.textContent('.ui-datepicker-month');
+            currentYear = await page.textContent('.ui-datepicker-year');
+        }
+    };
+
+    // Navigate to the target month and year
+    await navigateToTargetDate();
+
+    // Select the target day
+    const daySelector = `//a[contains(@class, 'ui-state-default') and text()='${parseInt(targetDay)}']`;
+    await page.click(daySelector);
+}
+
+async function selectTrainCoach(page, SCREEN_WAITING_TIME, TEN_SECOND) {
+    try {
+        await page.waitForURL('**\/train-list', { timeout: SCREEN_WAITING_TIME }); // 60 seconds
+        console.log("SECTION : 2 - Fill Source-Destination Entered");
+
+        // Step 1: Find the div containing (18463)
+        const divTrainNo = await page.locator('app-train-avl-enq', { hasText: `(${TRAIN_NO})` }).first();
+
+        // Step 2: Within that div, find the div containing (3A)
+        const divCoachType = await divTrainNo.locator('td', { hasText: TRAIN_COACH }).first();
+
+        // Step 3: Click on the (3A) div twice with a 500ms gap
+        await divCoachType.click({ timeout: TEN_SECOND });
+        await delay(500); // Wait for 500ms
+        const div3aDate = await divTrainNo.locator('td', { hasText: `${DATE} ${MONTH}` }).first();
+        await div3aDate.click({ timeout: TEN_SECOND });
+        const bookNowButton = await divTrainNo.locator('button.btnDefault.train_Search', { hasText: 'Book Now' }).first();
+        await bookNowButton.click({ timeout: TEN_SECOND }); // Increase timeout if needed
+
+        const yesButton = await page.locator('button.ui-confirmdialog-acceptbutton').first();
+        await yesButton.click({ timeout: TEN_SECOND });
+    } catch (e) {
+        log(`ERROR - SECTION : 2 - Select Train And Coach ${e}`);
+        console.error("ERROR - SECTION : 2 - Select Train And Coach");
+        console.log('------------------ Enter Mannualy Train Selection ------------------------------');
+    }
+}
+
 
 async function fillLoginDetails(page, TEN_SECOND) {
     try {
@@ -176,7 +269,7 @@ async function fillLoginDetails(page, TEN_SECOND) {
         await page.fill('input[formcontrolname="userid"]', USERNAME, { timeout: TEN_SECOND });
         await page.fill('input[formcontrolname="password"]', PASSWORD, { timeout: TEN_SECOND });
 
-        let isCaptchaResolved = await solveCaptcha(page, 1);
+        let isCaptchaResolved = await solveCaptcha(page, 1, TEN_SECOND);
         if (isCaptchaResolved) {
             await page.click('text=SIGN IN', { timeout: TEN_SECOND });
             console.log('Success Login filled successfully.');
@@ -185,84 +278,9 @@ async function fillLoginDetails(page, TEN_SECOND) {
         }
 
     } catch (e) {
+        log(`Error in fillLoginDetails: ${e}`);
         console.error("ERROR - SECTION : 3 - Sign and Captch Solving");
         console.log('------------------ Enter Mannualy Sign Form------------------------------');
-    }
-}
-
-async function upiPamentPage(page, SCREEN_WAITING_TIME, TEN_SECOND) {
-    try {
-        await page.waitForURL("**\/jsp/surchargePaymentPage.jsp", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
-
-
-        // MAKE SURE UPI ID EXISTS THEN PROCEED
-        if (UPI_ID && IS_UPI_PAYMENT) {
-            await page.waitForSelector('div.paymentSections input#vpaCheck', { state: 'visible', timeout: TEN_SECOND });
-
-            // Step 7: Fill the UPI ID in the input field
-            const upiInputField = await page.locator('div.paymentSections input#vpaCheck');
-            await upiInputField.fill(UPI_ID); // Replace with your actual UPI ID
-
-
-            // Step 8: Wait for the "Pay ₹ 2173.60" button to be visible
-            await page.waitForSelector('div.paymentSections input#upi-sbmt', { state: 'visible', timeout: TEN_SECOND });
-
-            // Step 9: Click the "Pay ₹ 2173.60" button
-            const payButton = await page.locator('div.paymentSections input#upi-sbmt');
-            await payButton.click({ timeout: TEN_SECOND });
-
-        } else {
-            await page.waitForSelector('span:has-text("Click here to pay through QR")', { state: 'visible', timeout: TEN_SECOND });
-
-            // Step 5: Click the "Click here to pay through QR" span
-            const qrPaymentSpan = await page.locator('div.paymentSections span:has-text("Click here to pay through QR")');
-            await qrPaymentSpan.click({ timeout: TEN_SECOND });
-        }
-
-    } catch (error) {
-        console.error("ERROR - SECTION : 7 - Payment");
-        console.log('------------------ Enter Mannualy   Payment   ------------------------------');
-    }
-}
-
-async function paymentTypeSelection(page, SCREEN_WAITING_TIME, TEN_SECOND) {
-    try {
-        await page.waitForURL("**\/payment/bkgPaymentOptions", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
-
-        await page.waitForSelector('div.bank-type', { state: 'visible', timeout: TEN_SECOND });
-        // BHIM UPI At Gateway Confirmation
-        const bhimOption = await page.locator('div.bank-type:has-text("BHIM/ UPI/ USSD")');
-        await bhimOption.click();
-
-        await page.waitForSelector('button.btn-primary:has-text("Pay & Book")', { state: 'visible', timeout: TEN_SECOND });
-
-        // Step 3: Click the "Pay & Book" button
-        const payAndBookButton = await page.locator('button.btn-primary:has-text("Pay & Book")');
-        await payAndBookButton.click({ timeout: TEN_SECOND });
-
-        // Clicking Pay And book
-        console.log('Clicked the "Pay And Book" button.');
-
-    } catch (error) {
-        console.error("ERROR - SECTION : 6 - Payment Type Selection");
-        console.log('------------------ Enter Mannualy Select  Payment Type  ------------------------------');
-    }
-}
-
-async function bookingDetailsReview(page, SCREEN_WAITING_TIME, TEN_SECOND) {
-    try {
-        await page.waitForURL("**\/booking/reviewBooking", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
-
-        let isCaptchaResolved = await solveCaptcha(page, 2);
-        if (isCaptchaResolved) {
-            await page.click('button[type="submit"]', { timeout: TEN_SECOND });
-            console.log('Clicked filled successfully.');
-        } else {
-            throw Error(' ------------------------- Fill Captcha Mannualy. ------ ');
-        }
-    } catch (e) {
-        console.error("ERROR - SECTION : 5 - Data View and Final Captcha Filling");
-        console.log('------------------ Enter Mannualy 2nd Captcha Filling ------------------------------');
     }
 }
 
@@ -322,134 +340,137 @@ async function passengersDetailsFilling(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     }
 }
 
-async function selectTrainCoach(page, SCREEN_WAITING_TIME, TEN_SECOND) {
+async function bookingDetailsReview(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     try {
-        await page.waitForURL('**\/train-list', { timeout: SCREEN_WAITING_TIME }); // 60 seconds
-        console.error("SECTION : 2 - Fill Source-Destination Entered");
-        await page.locator("//button[contains(., 'Next Day')]").click({ timeout: TEN_SECOND });
-        await delay(800);
+        await page.waitForURL("**\/booking/reviewBooking", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
 
-        // Step 1: Find the div containing (18463)
-        const divTrainNo = await page.locator('app-train-avl-enq', { hasText: `(${TRAIN_NO})` }).first();
-
-        // Step 2: Within that div, find the div containing (3A)
-        const divCoachType = await divTrainNo.locator('td', { hasText: TRAIN_COACH }).first();
-
-        // Step 3: Click on the (3A) div twice with a 500ms gap
-        await divCoachType.click({ timeout: TEN_SECOND });
-        await delay(500); // Wait for 500ms
-        const div3aDate = await divTrainNo.locator('td', { hasText: `${DATE} ${MONTH}` }).first();
-        await div3aDate.click({ timeout: TEN_SECOND });
-        const bookNowButton = await divTrainNo.locator('button.btnDefault.train_Search', { hasText: 'Book Now' }).first();
-        await bookNowButton.click({ timeout: TEN_SECOND }); // Increase timeout if needed
-
-        const yesButton = await page.locator('span.ui-button-text.ui-clickable', { hasText: 'Yes' }).first();
-        await yesButton.click({ timeout: TEN_SECOND });
+        let isCaptchaResolved = await solveCaptcha(page, 2, TEN_SECOND);
+        if (isCaptchaResolved) {
+            await page.click('button[type="submit"]', { timeout: TEN_SECOND });
+            console.log('Clicked filled successfully.');
+        } else {
+            throw Error(' ------------------------- Fill Captcha Mannualy. ------ ');
+        }
     } catch (e) {
-        log(`ERROR - SECTION : 2 - Select Train And Coach ${e}`);
-        console.error("ERROR - SECTION : 2 - Select Train And Coach");
-        console.log('------------------ Enter Mannualy Train Selection ------------------------------');
+        console.error("ERROR - SECTION : 5 - Data View and Final Captcha Filling");
+        console.log('------------------ Enter Mannualy 2nd Captcha Filling ------------------------------');
     }
 }
 
-async function fillJournyDetils(page, TEN_SECOND, SCREEN_WAITING_TIME) {
+async function paymentTypeSelection(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     try {
-        await page.waitForSelector('p-autocomplete[formcontrolname="origin"]', { timeout: SCREEN_WAITING_TIME });
+        await page.waitForURL("**\/payment/bkgPaymentOptions", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
 
-        // Fill in the password
-        await page.fill('p-autocomplete[formcontrolname="origin"] input', SOURCE_STATION, { timeout: TEN_SECOND });
-        await page.fill('p-autocomplete[formcontrolname="destination"] input', DESTINATION_STATION, { timeout: TEN_SECOND });
-        // await page.evaluate(() => {
-        //     document.querySelector('#jDate input').value = "06/03/2025"; 
-        // });
-        await page.evaluate((date) => {
-            document.querySelector('#jDate input').value = date;
-        }, TRAVEL_DATE);
-        // Wait for the dropdown to be visible and click it
-        await page.waitForSelector('p-dropdown#journeyClass div.ui-dropdown-trigger', { timeout: TEN_SECOND });
-        await page.click('p-dropdown#journeyClass div.ui-dropdown-trigger', { timeout: TEN_SECOND });
+        await page.waitForSelector('div.bank-type', { state: 'visible', timeout: TEN_SECOND });
+        // BHIM UPI At Gateway Confirmation
+        const bhimOption = await page.locator('div.bank-type:has-text("BHIM/ UPI/ USSD")');
+        await bhimOption.click();
 
-        // Wait for the dropdown options to appear
-        await page.waitForSelector('p-dropdown#journeyClass .ui-dropdown-items-wrapper', { timeout: TEN_SECOND });
+        await page.waitForSelector('button.btn-primary:has-text("Pay & Book")', { state: 'visible', timeout: TEN_SECOND });
 
-        // Select the "TATKAL" option
-        const options = page.locator('p-dropdown#journeyClass .ui-dropdown-item');
-        await options.first().waitFor({ state: 'attached' });
+        // Step 3: Click the "Pay & Book" button
+        const payAndBookButton = await page.locator('button.btn-primary:has-text("Pay & Book")');
+        await payAndBookButton.click({ timeout: TEN_SECOND });
 
-        const count = await options.count();
-        for (let i = 0; i < count; i++) {
-            const option = options.nth(i);
-            const text = await option.innerText();
-            if (text.includes(TRAIN_COACH)) {
-                await option.click({ timeout: TEN_SECOND });
-                break;
-            }
-        }
+        // Clicking Pay And book
+        console.log('Clicked the "Pay And Book" button.');
 
-        // / Wait for the dropdown trigger and click to open the dropdown
-        await page.waitForSelector('p-dropdown#journeyQuota .ui-dropdown-trigger', { timeout: TEN_SECOND });
-        await page.click('p-dropdown#journeyQuota .ui-dropdown-trigger', { timeout: TEN_SECOND });
-
-        // Wait for the dropdown options to appear
-        await page.waitForSelector('p-dropdown#journeyQuota .ui-dropdown-items-wrapper', { state: 'visible', timeout: TEN_SECOND });
-
-        const optionsList = page.locator('p-dropdown#journeyQuota .ui-dropdown-item');
-        // Wait for at least one option to be available
-        await optionsList.first().waitFor({ state: 'attached' });
-
-        const optionCount = await optionsList.count();
-        for (let i = 0; i < optionCount; i++) {
-            const option = optionsList.nth(i);
-            const text = await option.innerText();
-            if (text.includes(BOOKING_TYPE)) {
-                await option.click({ timeout: TEN_SECOND });
-                break;
-            }
-        }
-
-        await page.click('button[type="submit"]', { timeout: TEN_SECOND });
-    } catch (e) {
-        console.error("ERROR - SECTION : 1 - Fill Source-Destination");
+    } catch (error) {
+        console.error("ERROR - SECTION : 6 - Payment Type Selection");
+        console.log('------------------ Enter Mannualy Select  Payment Type  ------------------------------');
     }
 }
 
-async function solveCaptcha(page, captchaNumber) {
+
+async function upiPamentPage(page, SCREEN_WAITING_TIME, TEN_SECOND) {
+    try {
+        await page.waitForURL("**\/jsp/surchargePaymentPage.jsp", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
+
+
+        // MAKE SURE UPI ID EXISTS THEN PROCEED
+        if (UPI_ID && IS_UPI_PAYMENT) {
+            await page.waitForSelector('div.paymentSections input#vpaCheck', { state: 'visible', timeout: TEN_SECOND });
+
+            // Step 7: Fill the UPI ID in the input field
+            const upiInputField = await page.locator('div.paymentSections input#vpaCheck');
+            await upiInputField.fill(UPI_ID); // Replace with your actual UPI ID
+
+
+            // Step 8: Wait for the "Pay ₹ 2173.60" button to be visible
+            await page.waitForSelector('div.paymentSections input#upi-sbmt', { state: 'visible', timeout: TEN_SECOND });
+
+            // Step 9: Click the "Pay ₹ 2173.60" button
+            const payButton = await page.locator('div.paymentSections input#upi-sbmt');
+            await payButton.click({ timeout: TEN_SECOND });
+
+        } else {
+            await page.waitForSelector('span:has-text("Click here to pay through QR")', { state: 'visible', timeout: TEN_SECOND });
+
+            // Step 5: Click the "Click here to pay through QR" span
+            const qrPaymentSpan = await page.locator('div.paymentSections span:has-text("Click here to pay through QR")');
+            await qrPaymentSpan.click({ timeout: TEN_SECOND });
+        }
+
+    } catch (error) {
+        console.error("ERROR - SECTION : 7 - Payment");
+        console.log('------------------ Enter Mannualy   Payment   ------------------------------');
+    }
+}
+
+async function solveCaptcha(page, captchaNumber, TEN_SECOND) {
     let isCaptchaResolved = true;
     let retry = 0;
-    while (true) {
-        if (retry >= 3) {
-            break;
+
+    while (retry < 3) {
+        await captchaFiller(page, TEN_SECOND);
+
+        let element = null;
+        try {
+            // Wait for the error message, but catch timeout errors
+            await page.waitForSelector('.loginError', { timeout: 2000 });
+            element = await page.$('.loginError');
+        } catch (error) {
+            if (error.name === 'TimeoutError') {
+                // No error message appeared, assume captcha is correct
+                isCaptchaResolved = true;
+                break;
+            }
+            throw error; // Re-throw unexpected errors
         }
-        await captchaFiller(page);
-        await page.waitForSelector('.loginError', { timeout: 1000 });
-        let element = await page.$('.loginError');
-        const text = await element.textContent();
-        if (!text.includes('Invalid Captcha....')) {
-            isCaptchaResolved = true;
-            break;
+
+        if (element) {
+            const text = await page.evaluate(el => el.textContent, element);
+            if (!text.includes('Invalid Captcha....')) {
+                isCaptchaResolved = true;
+                break;
+            }
         }
+
         isCaptchaResolved = false;
-        console.log(captchaNumber, 'CAPTCHA filled successfully.');
+        console.log(captchaNumber, 'CAPTCHA retry:', retry + 1);
         retry++;
     }
+
     return isCaptchaResolved;
 }
 
-async function captchaFiller(page) {
+async function captchaFiller(page, TEN_SECOND) {
     try {
-        await page.waitForSelector('img.captcha-img', { timeout: TEN_SECOND });
-        // await delay(1000);
+        try {
+            await page.waitForSelector('img.captcha-img', { timeout: TEN_SECOND });
+        } catch (error) {
+            await page.locator(`a[aria-label="Click to refresh Captcha"]`).first().click;
+        }
         const captchaImage = await page.locator('img.captcha-img').first();
         const captchaUrl = await captchaImage.getAttribute('src');
-        // console.log('CAPTCHA URL:', captchaUrl);
 
         const captchaText = await captchaSolver(captchaUrl);
         console.log('Solved CAPTCHA Text:', captchaText);
 
         const captchaInput = await page.locator('input[name="captcha"]').first();
         await captchaInput.fill(captchaText, { timeout: TEN_SECOND });
-        // await delay(1000);
     } catch (error) {
+        log(`Captha Failed captchaFiller: ${error}`);
         console.error("Captha Failed captchaFiller")
     }
 }
@@ -471,7 +492,7 @@ async function addPassengers(page, passengers) {
 
             // Fill the passenger data
             const passengerForm = await page.locator('app-passenger').nth(i);
-            console.log(passengers[i]);
+            // console.log(passengers[i]);
             await fillPassengerData(passengerForm, passengers[i]);
         }
 
@@ -513,8 +534,5 @@ async function captchaSolver(captchaUrl) {
         return null;
     }
 }
-function log(message) {
-    if (LOG_TYPE === LogType.TESTING) {
-        console.log(message);
-    }
-}
+
+

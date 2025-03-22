@@ -2,25 +2,23 @@ export const passenger_data = {
   USERNAME: "your_username",
   PASSWORD: "your_password",
   MANUAL_CAPTCHA: false,
-  TRAIN_NO: "18463",
-  TRAIN_COACH: "3A", // Select from VALID_BOOKING_TYPE
-  TRAVEL_DATE: "15/03/2025", // Follow the format DD/MM/YYYY
-  DATE: "15",
-  MONTH: "Mar", // Copy the month (e.g., Apr, May)
-  SOURCE_STATION: "BRAHMAPUR - BAM (BRAHMAPUR)",
-  DESTINATION_STATION: "KRISHNARAJAPURM - KJM",
-  BOOKING_TYPE: "TATKAL", // Select from VALID_BOOKING_TYPE
-  UPI_ID: "your_upi_id@ybl", // Enter your working UPI ID
+  TRAIN_NO: "12345",
+  TRAIN_COACH: "SL", // Select from VALID_BOOKING_TYPE
+  TRAVEL_DATE: "21/03/2025", // Follow the format DD/MM/YYYY
+  SOURCE_STATION: "SRC",
+  DESTINATION_STATION: "DST",
+  BOOKING_TYPE: "GENERAL", // Select from VALID_BOOKING_TYPE
+  UPI_ID: "your_upi_id@bank", // Enter your working UPI ID
   IS_UPI_PAYMENT: true, // Set to false for QR payment
   PASSENGER_DETAILS: [
     {
-      name: "Passenger 1 Name",
-      age: "26",
+      name: "Passenger1",
+      age: "30",
       gender: "M", // Select from VALID_GENDERS
     },
     {
-      name: "Passenger 2 Name",
-      age: "62",
+      name: "Passenger2",
+      age: "60",
       gender: "F", // Select from VALID_GENDERS
     }
   ],

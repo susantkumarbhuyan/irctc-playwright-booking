@@ -25,20 +25,20 @@ sudo apt-get install python3-pip -y
 ```
 
 ## 2. Create and Activate a Virtual Environment
-Navigate to the project folder and create a virtual environment named `myenv`:
+Navigate to the project folder and create a virtual environment named `venv`:
 
 ```bash
-python3 -m venv myenv
+python3 -m venv venv
 ```
 
 ### Activate the Virtual Environment:
 - **Linux/macOS:**
   ```bash
-  source myenv/bin/activate
+  source venv/bin/activate
   ```
 - **Windows (Command Prompt):**
   ```cmd
-  myenv\Scripts\activate
+  venv\Scripts\activate
   ```
 
 ## 3. Install Python Dependencies
@@ -93,10 +93,8 @@ export const passenger_data = {
   TRAIN_NO: "22883",
   TRAIN_COACH: "3A", // Select from VALID_BOOKING_TYPE
   TRAVEL_DATE: "07/03/2025", // Follow the format DD/MM/YYYY
-  DATE: "07",
-  MONTH: "Mar", // Copy the month (e.g., Apr, May)
-  SOURCE_STATION: "BRAHMAPUR - BAM (BRAHMAPUR)",
-  DESTINATION_STATION: "KRISHNARAJAPURM - KJM",
+  SOURCE_STATION: "BAM",
+  DESTINATION_STATION: "KJM",
   BOOKING_TYPE: "TATKAL", // Select from VALID_BOOKING_TYPE
   UPI_ID: "your_upi_id@ybl", // Enter your working UPI ID
   IS_UPI_PAYMENT: true, // Set to false for QR payment
@@ -119,11 +117,21 @@ export const passenger_data = {
 ```
 
 ### 3. Run the Booking Script
-Execute the Node.js script to start the booking process:
+Run the appropriate command based on your operating system:
 
-```bash
-node irctcBooking.playwright.js
-```
+   **For macOS:**
+   ```bash
+   npm start start-booking-mac
+   ```
+  **For Windows:**
+   ```bash
+npm start start-booking-win
+   ```
+  **For Linux:**
+   ```bash
+npm start start-booking-linux
+   ```
+
 
 ---
 

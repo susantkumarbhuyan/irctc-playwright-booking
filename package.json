@@ -4,11 +4,11 @@
   "description": "IRCTC Ticket Booking",
   "type": "module",
   "scripts": {
-    "start-captha-server-linux": "source myenv/bin/activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
-    "start-captha-server-win": "myenv\\Scripts\\activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
+    "start-captha-server-linux": "bash -c 'source venv/bin/activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000'",
+    "start-captha-server-win": "venv\\Scripts\\activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
     "start-captha-server-mac": "source myenv/bin/activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
     "wait-for-captha-server-to-come-up": "wait-on http://localhost:5000",
-    "start-irctc-booking": "node src/booking/irctcBooking.playwright.js",
+    "start-irctc-booking": "node src/booking/irctcBooking.playwrightV2.js",
     "start-booking-linux": "concurrently \"npm run start-captha-server-linux\" \"npm run wait-for-captha-server-to-come-up && npm run start-irctc-booking\"",
     "start-booking-win": "concurrently \"npm run start-captha-server-win\" \"npm run wait-for-captha-server-to-come-up && npm run start-irctc-booking\"",
     "start-booking-mac": "concurrently \"npm run start-captha-server-mac\" \"npm run wait-for-captha-server-to-come-up && npm run start-irctc-booking\"",
@@ -18,10 +18,13 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^1.8.1",
+    "canvas": "^3.1.0",
     "dayjs": "^1.11.13",
+    "node-easyocr": "^1.0.9",
     "playwright": "^1.50.1"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "wait-on": "^8.0.3"
   }
 }
