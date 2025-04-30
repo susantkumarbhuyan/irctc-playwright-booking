@@ -80,6 +80,7 @@ Navigate to the project folder and install the required Node.js dependencies:
 
 ```bash
 npm install
+npx playwright install
 ```
 
 ### 2. Configure Passenger Data
@@ -121,15 +122,15 @@ Run the appropriate command based on your operating system:
 
    **For macOS:**
    ```bash
-   npm start start-booking-mac
+   npm run start-booking-mac
    ```
   **For Windows:**
    ```bash
-npm start start-booking-win
+   npm run start-booking-win
    ```
   **For Linux:**
    ```bash
-npm start start-booking-linux
+   npm run start-booking-linux
    ```
 
 

@@ -6,7 +6,7 @@
   "scripts": {
     "start-captha-server-linux": "bash -c 'source venv/bin/activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000'",
     "start-captha-server-win": "venv\\Scripts\\activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
-    "start-captha-server-mac": "source myenv/bin/activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
+    "start-captha-server-mac": "source venv/bin/activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
     "wait-for-captha-server-to-come-up": "wait-on http://localhost:5000",
     "start-irctc-booking": "node src/booking/irctcBooking.playwrightV2.js",
     "start-booking-linux": "concurrently \"npm run start-captha-server-linux\" \"npm run wait-for-captha-server-to-come-up && npm run start-irctc-booking\"",

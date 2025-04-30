@@ -3,7 +3,7 @@ export const BuildConfig = {
     DEV: "dev",
     TESTING: "testing"
 }
-export const BUILD_CONFIG = BuildConfig.TESTING;
+export const BUILD_CONFIG = BuildConfig.LIVE; // Change this to BuildConfig.DEV or BuildConfig.TESTING for different environments
 
 // Tatkal timings
 export const tatkalOpenTimings = {
@@ -27,9 +27,8 @@ export function parseTravelDate(travelDate) {
         MONTH: months[parseInt(month, 10) - 1] // Convert month number to short name
     };
 }
-const LOG_TYPE = BuildConfig.TESTING;
 export const log = (message) => {
-    if (LOG_TYPE === BuildConfig.TESTING) {
+    if (BUILD_CONFIG === BuildConfig.TESTING) {
         console.log(message);
     }
 }

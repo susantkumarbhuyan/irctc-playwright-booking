@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-import { passenger_data } from '../booking/data/passenger_data.js';
+import { passenger_data } from '../../booking/passenger_data.js';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import axios from "axios";
@@ -264,7 +264,7 @@ async function bookTatkalTicket() {
         // We can implement for Select  only BHIM UPI and QR payment 
         //--------------------------------------------------Not Verified START ----------------------
         try {
-            await page.waitForURL("**\/payment/bkgPaymentOptions", { timeout:  SCREEN_WAITING_TIME }); // 60 seconds
+            await page.waitForURL("**\/payment/bkgPaymentOptions", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
 
             await page.waitForSelector('div.bank-type', { state: 'visible', timeout: TEN_SECOND });
             // BHIM UPI At Gateway Confirmation
@@ -290,7 +290,7 @@ async function bookTatkalTicket() {
         // We can implement for Select  only BHIM UPI and QR payment 
 
         try {
-            await page.waitForURL("**\/jsp/surchargePaymentPage.jsp", { timeout:  SCREEN_WAITING_TIME }); // 60 seconds
+            await page.waitForURL("**\/jsp/surchargePaymentPage.jsp", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
 
             // MAKE SURE UPI ID EXISTS THEN PROCEED
             if (UPI_ID && IS_UPI_PAYMENT) {

@@ -1,23 +1,20 @@
 import { chromium } from 'playwright';
-import { passenger_data } from '../booking/data/passenger_data.js';
+import { BookingType, passenger_data, PaymentType } from './passenger_data.js';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import axios from "axios";
-import { delay, log, parseTravelDate } from './BuildConfig.js';
-import { BUILD_CONFIG, BuildConfig, monthNames } from './utils.js';
+import { BUILD_CONFIG, BuildConfig, monthNames, delay, log, parseTravelDate, tatkalOpenTimings } from './utils.js';
 
 dayjs.extend(customParseFormat);
 
 const { USERNAME, PASSWORD, SOURCE_STATION, DESTINATION_STATION,
     TRAIN_NO, TRAIN_COACH, TRAVEL_DATE, PASSENGER_DETAILS,
-    BOOKING_TYPE, UPI_ID } = passenger_data;
+    BOOKING_TYPE, UPI_ID, PAYMENT_TYPE } = passenger_data;
 
 const { DATE, MONTH } = parseTravelDate(TRAVEL_DATE);
 
 if (BUILD_CONFIG === BuildConfig.LIVE) {
-    await waitForTatkalOpen(TRAIN_COACH);
-} else if (BUILD_CONFIG === BuildConfig.DEV) {
-    await bookTatkalTicketV2();
+    await startTicketBooking();
 } else {
     await bookTatkalTicketV2();
 }
@@ -32,6 +29,17 @@ function hasTatkalAlreadyOpened(TRAIN_COACH) {
 function tatkalOpenTimeForToday(TRAIN_COACH) {
     const openTime = tatkalOpenTimings[TRAIN_COACH];
     return `${openTime}`;
+}
+
+async function startTicketBooking() {
+    if (BOOKING_TYPE === BookingType.Tatkal) {
+        await waitForTatkalOpen(TRAIN_COACH);
+    }
+    else if (BOOKING_TYPE === BookingType.General || BOOKING_TYPE === BookingType.PremiumTatkal) {
+        await bookTatkalTicketV2();
+    } else {
+        console.log("Invalid booking type. Please choose either 'TATKAL' or 'GENERAL'.");
+    }
 }
 
 export async function waitForTatkalOpen(TRAIN_COACH) {
@@ -114,6 +122,7 @@ async function bookTatkalTicketV2() {
     }
 }
 async function listenForPopup(page, selector, popupType, TEN_SECOND, SCREEN_WAITING_TIME) {
+    let isTrainSearchHandled = false;
     while (true) {
         await page.waitForSelector(selector, { state: 'attached', timeout: 0 });  // No timeout
         console.log(`✅ ${popupType} popup detected!`);
@@ -136,7 +145,7 @@ async function waitForLoaderRemove(page) {
     // Check if the preloader is visible before waiting for it to be detached
     if (await preloader.isVisible()) {
         await preloader.waitFor({ state: 'detached', timeout: 0 }); // Infinite wait
-        console.log(`Loader closed!`);
+        console.log(`Loader closed!`); 12345
     }
 
 }
@@ -166,7 +175,6 @@ async function fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME) {
         await page.click('button[type="submit"]', { timeout: TEN_SECOND });
     } catch (e) {
         log(`ERROR - SECTION : 1 - Fill Source-Destination ${e}`);
-        console.error("ERROR - SECTION : 1 - Fill Source-Destination", e);
     }
 }
 
@@ -248,14 +256,18 @@ async function selectTrainCoach(page, SCREEN_WAITING_TIME, TEN_SECOND) {
         await delay(500); // Wait for 500ms
         const div3aDate = await divTrainNo.locator('td', { hasText: `${DATE} ${MONTH}` }).first();
         await div3aDate.click({ timeout: TEN_SECOND });
+        const isWaitingList = await divTrainNo.locator('td', { hasText: `WL` }).first();
+
         const bookNowButton = await divTrainNo.locator('button.btnDefault.train_Search', { hasText: 'Book Now' }).first();
         await bookNowButton.click({ timeout: TEN_SECOND }); // Increase timeout if needed
 
-        const yesButton = await page.locator('button.ui-confirmdialog-acceptbutton').first();
-        await yesButton.click({ timeout: TEN_SECOND });
+        if (!isWaitingList) {
+            const yesButton = await page.locator('button.ui-confirmdialog-acceptbutton').first();
+            await yesButton.click({ timeout: TEN_SECOND });
+        }
+
     } catch (e) {
         log(`ERROR - SECTION : 2 - Select Train And Coach ${e}`);
-        console.error("ERROR - SECTION : 2 - Select Train And Coach");
         console.log('------------------ Enter Mannualy Train Selection ------------------------------');
     }
 }
@@ -307,12 +319,10 @@ async function passengersDetailsFilling(page, SCREEN_WAITING_TIME, TEN_SECOND) {
             // Check if the text contains specific strings and perform actions
             if (bodyText.includes('Book only if confirm berths are allotted')) {
                 await page.locator(':nth-child(2) > .css-label_c').click(); // Click the element
-                console.log('Clicked "Book only if confirm berths are allotted" checkbox.');
             }
 
             if (bodyText.includes('Consider for Auto Upgradation.')) {
                 await page.locator('text=Consider for Auto Upgradation.').click(); // Click the element containing the text
-                console.log('Clicked "Consider for Auto Upgradation." checkbox.');
             }
         } catch (error) {
             console.error('An error occurred:', error);
@@ -388,7 +398,7 @@ async function upiPamentPage(page, SCREEN_WAITING_TIME, TEN_SECOND) {
 
 
         // MAKE SURE UPI ID EXISTS THEN PROCEED
-        if (UPI_ID && IS_UPI_PAYMENT) {
+        if (UPI_ID && PAYMENT_TYPE === PaymentType.UPI) {
             await page.waitForSelector('div.paymentSections input#vpaCheck', { state: 'visible', timeout: TEN_SECOND });
 
             // Step 7: Fill the UPI ID in the input field
@@ -524,7 +534,7 @@ async function fillPassengerData(passengerForm, data) {
 
 async function captchaSolver(captchaUrl) {
     try {
-        const response = await axios.post("http://localhost:5001/extract-text", {
+        const response = await axios.post("http://localhost:5000/extract-text", {
             image: captchaUrl, // Assuming `captchaUrl` is a base64 image string
         });
 
