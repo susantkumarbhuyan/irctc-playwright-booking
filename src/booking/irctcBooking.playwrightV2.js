@@ -60,16 +60,30 @@ async function bookTatkalTicketV2() {
     const ONE_SECOND = 1000;
     const SCREEN_WAITING_TIME = ONE_SECOND * 60 * 5 //min
     const TEN_SECOND = ONE_SECOND * 6;
-    // Launch the browser
-    const browser = await chromium.launch({ headless: false });
+    // // Launch the browser
+    // const browser = await chromium.launch({ headless: false });
 
-    // Create a new context with desktop user agent
-    const context = await browser.newContext({
-        viewport: { width: 1920, height: 1080 }, // Set viewport size
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', // Desktop user agent
-    });
+    // // Create a new context with desktop user agent
+    // const context = await browser.newContext({
+    //     viewport: { width: 1920, height: 1080 }, // Set viewport size
+    //     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', // Desktop user agent
+    // });
 
-    const page = await context.newPage();
+    // const page = await context.newPage();
+
+    // Example: chrome.exe --remote-debugging-port=9222
+    const browser = await chromium.connectOverCDP('http://localhost:9222');
+    console.log('Connected to existing Chrome instance');
+
+    // Get the first context and page (or create a new one if needed)
+    const contexts = browser.contexts();
+    const context = contexts.length > 0 ? contexts[0] : await browser.newContext();
+    const pages = context.pages();
+    const page = pages.length > 0 ? pages[0] : await context.newPage();
+
+
+
+
 
     // Navigate to the IRCTC website
     let isTrainSearchHandled = false;
@@ -115,6 +129,14 @@ async function bookTatkalTicketV2() {
         });
 
         listenForPopup(page, 'app-login', 'Login', TEN_SECOND, SCREEN_WAITING_TIME);
+        // // Navigate to IRCTC if not already there
+        // const currentUrl = page.url();
+        // if (!currentUrl.includes('irctc.co.in')) {
+        //     console.log('Navigating to IRCTC website...');
+        //     await page.goto('https://www.irctc.co.in/nget/train-search');
+        // } else {
+        //     console.log('Already on IRCTC website');
+        // }
         await page.goto('https://www.irctc.co.in/nget/train-search');
         await fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME);
     } catch (error) {
@@ -306,7 +328,7 @@ async function passengersDetailsFilling(page, SCREEN_WAITING_TIME, TEN_SECOND) {
         const appPassenger = await page.locator('app-passenger').first();
         if (await appPassenger.isVisible()) {
             console.log('app-passenger element found.');
-            await addPassengers(page, PASSENGER_DETAILS);
+            await addPassengers(page, PASSENGER_DETAILS, TEN_SECOND);
         } else {
             console.log('app-passenger element not found');
             console.log('------------------ Enter Passenger Mannualy------------------------------');
@@ -486,7 +508,7 @@ async function captchaFiller(page, TEN_SECOND) {
 }
 
 
-async function addPassengers(page, passengers) {
+async function addPassengers(page, passengers, TEN_SECOND) {
     try {
         console.log(passengers);
         for (let i = 0; i < passengers.length; i++) {
@@ -513,7 +535,7 @@ async function addPassengers(page, passengers) {
 
 
 // / Helper function to fill passenger data
-async function fillPassengerData(passengerForm, data) {
+async function fillPassengerData(passengerForm, data, TEN_SECOND) {
     // Fill the name input field
     const passengerName = await passengerForm.locator('input[placeholder="Name"]').first();
     await passengerName.fill(data.name, { timeout: TEN_SECOND });
@@ -532,7 +554,7 @@ async function fillPassengerData(passengerForm, data) {
 }
 
 
-async function captchaSolver(captchaUrl) {
+export async function captchaSolver(captchaUrl) {
     try {
         const response = await axios.post("http://localhost:5000/extract-text", {
             image: captchaUrl, // Assuming `captchaUrl` is a base64 image string

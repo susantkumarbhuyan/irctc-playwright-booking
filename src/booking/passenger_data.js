@@ -40,12 +40,12 @@ export const passenger_data = {
   PAYMENT_TYPE: PaymentType.UPI, // Select PaymentType: true, // Set to false for QR payment
   PASSENGER_DETAILS: [
     {
-      name: "Passenger1",
+      name: "Passenger One",
       age: "30",
       gender: Gender.Male, // Select Gender
     },
     {
-      name: "Passenger2",
+      name: "Passenger Two",
       age: "60",
       gender: Gender.Female, // Select Gender
     }

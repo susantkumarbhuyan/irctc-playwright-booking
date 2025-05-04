@@ -117,22 +117,29 @@ export const passenger_data = {
 };
 ```
 
-### 3. Run the Booking Script
+### Step 3: Start Chrome with Remote Debugging
+
+Run the command below based on your OS to restart Chrome with `--remote-debugging-port=9222`.
+
+**Windows:**
+```bash
+taskkill /f /im chrome.exe >nul 2>&1 || true && start chrome.exe --remote-debugging-port=9222
+```
+**macOS:**
+```bash
+pkill -f "Google Chrome" || true && (open -a "Google Chrome" --args --remote-debugging-port=9222 &)
+```
+**Linux:**
+```bash
+pkill -f chrome || true && (google-chrome --remote-debugging-port=9222 &>/dev/null &)
+```
+
+### 4. Run the Booking Script
 Run the appropriate command based on your operating system:
 
-   **For macOS:**
    ```bash
-   npm run start-booking-mac
+   npm start
    ```
-  **For Windows:**
-   ```bash
-   npm run start-booking-win
-   ```
-  **For Linux:**
-   ```bash
-   npm run start-booking-linux
-   ```
-
 
 ---
 

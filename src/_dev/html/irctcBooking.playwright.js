@@ -22,29 +22,7 @@ const {
 } = passenger_data;
 
 
-const upiRegex = /^[a-zA-Z0-9]+@[a-zA-Z0-9.]+$/;
-const isValidUpiId = upiRegex.test(UPI_ID);
 
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Tatkal timings
-const tatkalOpenTimings = {
-    "2A": "10:00",
-    "3A": "10:00",
-    "3E": "10:00",
-    "1A": "10:00",
-    "CC": "10:00",
-    "EC": "10:00",
-    "2S": "11:00",
-    "SL": "11:00",
-};
-
-
-// Utility functions
-function formatDate(inputDate) {
-    return dayjs(inputDate, 'DD/MM/YYYY').format('ddd, DD MMM');
-}
 
 function hasTatkalAlreadyOpened(TRAIN_COACH) {
     const openTime = tatkalOpenTimings[TRAIN_COACH];
@@ -473,18 +451,4 @@ async function fillPassengerData(passengerForm, data) {
     // // Select the preference from the dropdown
     // const passengerPreference = await passengerForm.locator('select[formcontrolname="passengerBerthChoice"]').first();
     // await passengerPreference.selectOption({ value: data.preference });
-}
-
-
-async function captchaSolver(captchaUrl) {
-    try {
-        const response = await axios.post("http://localhost:5001/extract-text", {
-            image: captchaUrl, // Assuming `captchaUrl` is a base64 image string
-        });
-
-        return response.data.extracted_text;
-    } catch (error) {
-        console.error("Error extracting text:API");
-        return null;
-    }
 }

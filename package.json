@@ -4,6 +4,10 @@
   "description": "IRCTC Ticket Booking",
   "type": "module",
   "scripts": {
+    "chrome:debug:win": "taskkill /f /im chrome.exe >nul 2>&1 || true && start chrome.exe --remote-debugging-port=9222",
+    "chrome:debug:mac": "pkill -f \"Google Chrome\" || true && (open -a \"Google Chrome\" --args --remote-debugging-port=9222 &)",
+    "chrome:debug:linux": "pkill -f chrome || true && (google-chrome --remote-debugging-port=9222 &>/dev/null &)",
+    "chrome:debug": "node -e \"require('child_process').spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'chrome:debug:' + (process.platform === 'win32' ? 'win' : (process.platform === 'darwin' ? 'mac' : 'linux'))], {stdio: 'inherit', detached: true})\"",
     "start-captha-server-linux": "bash -c 'source venv/bin/activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000'",
     "start-captha-server-win": "venv\\Scripts\\activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
     "start-captha-server-mac": "source venv/bin/activate && python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5000",
@@ -12,6 +16,8 @@
     "start-booking-linux": "concurrently \"npm run start-captha-server-linux\" \"npm run wait-for-captha-server-to-come-up && npm run start-irctc-booking\"",
     "start-booking-win": "concurrently \"npm run start-captha-server-win\" \"npm run wait-for-captha-server-to-come-up && npm run start-irctc-booking\"",
     "start-booking-mac": "concurrently \"npm run start-captha-server-mac\" \"npm run wait-for-captha-server-to-come-up && npm run start-irctc-booking\"",
+    "start-booking": "node -e \"require('child_process').spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'start-booking-' + (process.platform === 'win32' ? 'win' : (process.platform === 'darwin' ? 'mac' : 'linux'))], {stdio: 'inherit'})\"",
+    "start": "npm run start-booking",
     "test": "node src/booking/irctcBooking.playwright.js"
   },
   "author": "Susant Kumar",
@@ -20,7 +26,7 @@
     "axios": "^1.8.1",
     "canvas": "^3.1.0",
     "dayjs": "^1.11.13",
-    "node-easyocr": "^1.0.9",
+    "node-tesseract-ocr": "^2.2.1",
     "playwright": "^1.50.1"
   },
   "devDependencies": {
