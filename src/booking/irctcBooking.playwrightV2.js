@@ -61,16 +61,6 @@ async function bookTatkalTicketV2() {
     const SCREEN_WAITING_TIME = ONE_SECOND * 60 * 5 //min
     const TEN_SECOND = ONE_SECOND * 6;
     // // Launch the browser
-    // const browser = await chromium.launch({ headless: false });
-
-    // // Create a new context with desktop user agent
-    // const context = await browser.newContext({
-    //     viewport: { width: 1920, height: 1080 }, // Set viewport size
-    //     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', // Desktop user agent
-    // });
-
-    // const page = await context.newPage();
-
     // Example: chrome.exe --remote-debugging-port=9222
     const browser = await chromium.connectOverCDP('http://localhost:9222');
     console.log('Connected to existing Chrome instance');
@@ -129,15 +119,8 @@ async function bookTatkalTicketV2() {
         });
 
         listenForPopup(page, 'app-login', 'Login', TEN_SECOND, SCREEN_WAITING_TIME);
-        // // Navigate to IRCTC if not already there
-        // const currentUrl = page.url();
-        // if (!currentUrl.includes('irctc.co.in')) {
-        //     console.log('Navigating to IRCTC website...');
-        //     await page.goto('https://www.irctc.co.in/nget/train-search');
-        // } else {
-        //     console.log('Already on IRCTC website');
-        // }
-        await page.goto('https://www.irctc.co.in/nget/train-search');
+
+        await page.goto('https://www.irctc.co.in/nget/train-search', { waitUntil: 'domcontentloaded' });
         await fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME);
     } catch (error) {
         console.error("ERROR - SECTION 1 : Continue BTN CLick", error)
