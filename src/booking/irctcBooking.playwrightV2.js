@@ -3,7 +3,7 @@ import { BookingType, passenger_data, PaymentType } from './passenger_data.js';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import axios from "axios";
-import { BUILD_CONFIG, BuildConfig, monthNames, delay, log, parseTravelDate, tatkalOpenTimings } from './utils.js';
+import { BUILD_CONFIG, BuildConfig, monthNames, delay, log, parseTravelDate, tatkalOpenTimings, tatkalOpenTimeForToday } from './utils.js';
 
 dayjs.extend(customParseFormat);
 
@@ -26,17 +26,12 @@ function hasTatkalAlreadyOpened(TRAIN_COACH) {
     return currentTime.isAfter(targetTime);
 }
 
-function tatkalOpenTimeForToday(TRAIN_COACH) {
-    const openTime = tatkalOpenTimings[TRAIN_COACH];
-    return `${openTime}`;
-}
-
 async function startTicketBooking() {
     if (BOOKING_TYPE === BookingType.Tatkal) {
         await waitForTatkalOpen(TRAIN_COACH);
     }
     else if (BOOKING_TYPE === BookingType.General || BOOKING_TYPE === BookingType.PremiumTatkal) {
-        await bookTatkalTicketV2();
+        await bookTicket();
     } else {
         console.log("Invalid booking type. Please choose either 'TATKAL' or 'GENERAL'.");
     }
@@ -50,13 +45,13 @@ export async function waitForTatkalOpen(TRAIN_COACH) {
             await delay(1000); // Wait 1 second before checking again
         }
         console.log("Tatkal booking is now open!");
-        await bookTatkalTicketV2();
+        await bookTicket();
     } else {
         console.log("Tatkal booking is already open.");
     }
 }
 
-async function bookTatkalTicketV2() {
+async function bookTicket() {
     const ONE_SECOND = 1000;
     const SCREEN_WAITING_TIME = ONE_SECOND * 60 * 5 //min
     const TEN_SECOND = ONE_SECOND * 6;
@@ -70,10 +65,6 @@ async function bookTatkalTicketV2() {
     const context = contexts.length > 0 ? contexts[0] : await browser.newContext();
     const pages = context.pages();
     const page = pages.length > 0 ? pages[0] : await context.newPage();
-
-
-
-
 
     // Navigate to the IRCTC website
     let isTrainSearchHandled = false;
@@ -119,7 +110,6 @@ async function bookTatkalTicketV2() {
         });
 
         listenForPopup(page, 'app-login', 'Login', TEN_SECOND, SCREEN_WAITING_TIME);
-
         await page.goto('https://www.irctc.co.in/nget/train-search', { waitUntil: 'domcontentloaded' });
         await fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME);
     } catch (error) {
@@ -150,7 +140,7 @@ async function waitForLoaderRemove(page) {
     // Check if the preloader is visible before waiting for it to be detached
     if (await preloader.isVisible()) {
         await preloader.waitFor({ state: 'detached', timeout: 0 }); // Infinite wait
-        console.log(`Loader closed!`); 12345
+        console.log(`Loader closed!`);
     }
 
 }

@@ -41,3 +41,8 @@ export const isValidUpiId = () => {
     return upiRegex.test(UPI_ID);
 }
 export const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+export const tatkalOpenTimeForToday = (TRAIN_COACH) => {
+    const openTime = tatkalOpenTimings[TRAIN_COACH];
+    return `${openTime}`;
+}
