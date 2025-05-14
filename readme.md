@@ -123,15 +123,15 @@ Run the command below based on your OS to restart Chrome with `--remote-debuggin
 
 **Windows:**
 ```bash
-taskkill /f /im chrome.exe >nul 2>&1 || true && start chrome.exe --remote-debugging-port=9222
+start chrome.exe --remote-debugging-port=9222
 ```
 **macOS:**
 ```bash
-pkill -f "Google Chrome" || true && (open -a "Google Chrome" --args --remote-debugging-port=9222 &)
+open -a "Google Chrome" --args --remote-debugging-port=9222
 ```
 **Linux:**
 ```bash
-pkill -f chrome || true && (google-chrome --remote-debugging-port=9222 &>/dev/null &)
+google-chrome --remote-debugging-port=9222
 ```
 
 ### 4. Run the Booking Script
