@@ -9,12 +9,12 @@ dayjs.extend(customParseFormat);
 
 const { USERNAME, PASSWORD, SOURCE_STATION, DESTINATION_STATION,
     TRAIN_NO, TRAIN_COACH, TRAVEL_DATE, PASSENGER_DETAILS,
-    BOOKING_TYPE, UPI_ID, PAYMENT_TYPE } = passenger_data;
+    BOOKING_TYPE, UPI_ID, PAYMENT_TYPE, MANUAL_CAPTCHA } = passenger_data;
 
 const { DATE, MONTH } = parseTravelDate(TRAVEL_DATE);
 const ONE_SECOND = 1000;
 const SCREEN_WAITING_TIME = ONE_SECOND * 60 * 5 //min
-const TEN_SECOND = ONE_SECOND * 6;
+const TEN_SECOND = ONE_SECOND * 10;
 
 if (BUILD_CONFIG === BuildConfig.LIVE) {
     await startTicketBooking();
@@ -277,15 +277,18 @@ async function fillLoginDetails(page, TEN_SECOND) {
 
         await page.fill('input[formcontrolname="userid"]', USERNAME, { timeout: TEN_SECOND });
         await page.fill('input[formcontrolname="password"]', PASSWORD, { timeout: TEN_SECOND });
-
-        let isCaptchaResolved = await solveCaptcha(page, 1, TEN_SECOND);
-        if (isCaptchaResolved) {
-            await page.click('text=SIGN IN', { timeout: TEN_SECOND });
-            console.log('Success Login filled successfully.');
+        if (!MANUAL_CAPTCHA) {
+            let isCaptchaResolved = await solveCaptcha(page, 1, TEN_SECOND);
+            if (isCaptchaResolved) {
+                await page.click('text=SIGN IN', { timeout: TEN_SECOND });
+                console.log('Success Login filled successfully.');
+            } else {
+                throw Error(' ------------------------- Fill Captcha Mannualy. ------ ');
+            }
         } else {
-            throw Error(' ------------------------- Fill Captcha Mannualy. ------ ');
-        }
+            console.log('------------------ Enter Mannualy Sign Form ------------------------------');
 
+        }
     } catch (e) {
         log(`Error in fillLoginDetails: ${e}`);
         console.error("ERROR - SECTION : 3 - Sign and Captch Solving");
@@ -351,13 +354,18 @@ async function bookingDetailsReview(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     try {
         await page.waitForURL("**\/booking/reviewBooking", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
 
-        let isCaptchaResolved = await solveCaptcha(page, 2, TEN_SECOND);
-        if (isCaptchaResolved) {
-            await page.click('button[type="submit"]', { timeout: TEN_SECOND });
-            console.log('Clicked filled successfully.');
+        if (!MANUAL_CAPTCHA) {
+            let isCaptchaResolved = await solveCaptcha(page, 2, TEN_SECOND);
+            if (isCaptchaResolved) {
+                await page.click('button[type="submit"]', { timeout: TEN_SECOND });
+                console.log('Clicked filled successfully.');
+            } else {
+                throw Error(' ------------------------- Fill Captcha Mannualy. ------ ');
+            }
         } else {
-            throw Error(' ------------------------- Fill Captcha Mannualy. ------ ');
+            console.log('------------------ Enter Mannualy Captcha Filling ------------------------------');
         }
+
     } catch (e) {
         console.error("ERROR - SECTION : 5 - Data View and Final Captcha Filling");
         console.log('------------------ Enter Mannualy 2nd Captcha Filling ------------------------------');

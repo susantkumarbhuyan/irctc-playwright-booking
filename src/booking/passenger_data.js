@@ -29,7 +29,7 @@ export const PaymentType = Object.freeze({
 export const passenger_data = {
   USERNAME: "your_username",
   PASSWORD: "your_password",
-  MANUAL_CAPTCHA: false,
+  MANUAL_CAPTCHA: true,
   TRAIN_NO: "12842",
   TRAIN_COACH: CoachType.SL, // Select CoachType
   TRAVEL_DATE: "15/05/2025", // Follow the format DD/MM/YYYY
