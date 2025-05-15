@@ -58,7 +58,7 @@ export async function waitForTatkalOpen(TRAIN_COACH) {
 async function bookTicket() {
 
     // // Launch the browser
-    // Example: chrome.exe --remote-debugging-port=9222
+    // Example: google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-irctc
     const browser = await chromium.connectOverCDP('http://localhost:9222');
     console.log('Connected to existing Chrome instance');
 

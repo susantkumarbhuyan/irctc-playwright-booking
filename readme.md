@@ -9,69 +9,24 @@ This project automates the process of solving IRCTC captchas and booking train t
 Before running the project, ensure the following are installed on your system:
 
 1. **Node.js and npm**: Install Node.js and npm from [here](https://nodejs.org/).
-2. **Python and pip**: Install Python from [here](https://www.python.org/).
+2. **Run The Python Python Captha solver Befor Start Booking NPM**: Install Python from [here](https://github.com/susantkumarbhuyan/irctc-captcha-solver).
 
 ---
 
 ## Installation Steps
 
-# IRCTC Captcha Solver Setup Guide
+## IRCTC Captcha Solver
 
-## 1. Install Python and pip
-Ensure Python is installed on your system. If `pip` is missing, install it using:
+Automate or simplify the IRCTC booking process by handling captchas efficiently.
 
-```bash
-sudo apt-get install python3-pip -y
-```
+### Setup Guide
 
-## 2. Create and Activate a Virtual Environment
-Navigate to the project folder and create a virtual environment named `venv`:
+### Option 1: Manual Captcha Filling (No Setup Required)
+If you prefer to manually solve captchas during the booking process, no additional setup is required. Simply proceed with the booking flow.
 
-```bash
-python3 -m venv venv
-```
+### Option 2: Automated Captcha Filling
+Make  "MANUAL_CAPTCHA": false and follow the guide steps  [here](https://github.com/susantkumarbhuyan/irctc-captcha-solver)
 
-### Activate the Virtual Environment:
-- **Linux/macOS:**
-  ```bash
-  source venv/bin/activate
-  ```
-- **Windows (Command Prompt):**
-  ```cmd
-  venv\Scripts\activate
-  ```
-
-## 3. Install Python Dependencies
-Once the virtual environment is activated, install the required dependencies:
-
-```bash
-pip install -r irctc-captcha-solver/requirements.txt
-```
-
-## 4. Verify the Captcha Solver
-Run the Python captcha solver server to ensure it works correctly:
-
-```bash
-python irctc-captcha-solver/app-server.py --host 0.0.0.0 --port 5001
-```
-
-### Test the Server
-Use `curl` to verify the API is running:
-
-```bash
-curl -X POST "http://localhost:5001/extract-text" \
--H "Content-Type: application/json" \
--d '{
-     "image": ""
-    }'
-```
-
-### Expected Response:
-```json
-{"error":"No base64 image string provided"}
-```
-
----
 
 ## Node.js Script Setup
 
@@ -131,7 +86,7 @@ open -a "Google Chrome" --args --remote-debugging-port=9222
 ```
 **Linux:**
 ```bash
-google-chrome --remote-debugging-port=9222
+google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-irctc
 ```
 
 ### 4. Run the Booking Script

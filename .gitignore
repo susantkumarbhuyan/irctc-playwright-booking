@@ -1,7 +1,4 @@
 node_modules/
 .idea
-irctc-captcha-solver/__pycache__
-venv
 .env
-__pycache__
 C:*
