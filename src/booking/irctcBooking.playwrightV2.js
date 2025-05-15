@@ -12,11 +12,14 @@ const { USERNAME, PASSWORD, SOURCE_STATION, DESTINATION_STATION,
     BOOKING_TYPE, UPI_ID, PAYMENT_TYPE } = passenger_data;
 
 const { DATE, MONTH } = parseTravelDate(TRAVEL_DATE);
+const ONE_SECOND = 1000;
+const SCREEN_WAITING_TIME = ONE_SECOND * 60 * 5 //min
+const TEN_SECOND = ONE_SECOND * 6;
 
 if (BUILD_CONFIG === BuildConfig.LIVE) {
     await startTicketBooking();
 } else {
-    await bookTatkalTicketV2();
+    await bookTicket();
 }
 
 function hasTatkalAlreadyOpened(TRAIN_COACH) {
@@ -48,13 +51,12 @@ export async function waitForTatkalOpen(TRAIN_COACH) {
         await bookTicket();
     } else {
         console.log("Tatkal booking is already open.");
+        await bookTicket();
     }
 }
 
 async function bookTicket() {
-    const ONE_SECOND = 1000;
-    const SCREEN_WAITING_TIME = ONE_SECOND * 60 * 5 //min
-    const TEN_SECOND = ONE_SECOND * 6;
+
     // // Launch the browser
     // Example: chrome.exe --remote-debugging-port=9222
     const browser = await chromium.connectOverCDP('http://localhost:9222');
