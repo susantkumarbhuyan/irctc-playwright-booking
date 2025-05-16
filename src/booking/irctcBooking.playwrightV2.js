@@ -4,6 +4,12 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import axios from "axios";
 import { BUILD_CONFIG, BuildConfig, monthNames, delay, log, parseTravelDate, tatkalOpenTimings, tatkalOpenTimeForToday } from './utils.js';
+import playwright from 'playwright-extra';
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+// Apply stealth plugin to playwright
+playwright.firefox.use(StealthPlugin());
+playwright.chromium.use(StealthPlugin());
+
 
 dayjs.extend(customParseFormat);
 
@@ -14,7 +20,7 @@ const { USERNAME, PASSWORD, SOURCE_STATION, DESTINATION_STATION,
 const { DATE, MONTH } = parseTravelDate(TRAVEL_DATE);
 const ONE_SECOND = 1000;
 const SCREEN_WAITING_TIME = ONE_SECOND * 60 * 5 //min
-const TEN_SECOND = ONE_SECOND * 10;
+const TEN_SECOND = ONE_SECOND * 20;
 
 if (BUILD_CONFIG === BuildConfig.LIVE) {
     await startTicketBooking();
@@ -58,8 +64,9 @@ export async function waitForTatkalOpen(TRAIN_COACH) {
 async function bookTicket() {
 
     // // Launch the browser
-    // Example: google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-irctc
-    const browser = await chromium.connectOverCDP('http://localhost:9222');
+    // Example: google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-irctc //  allow  use different profile bcz irctc can block while login
+    const browser = await chromium.connectOverCDP('http://localhost:9223');
+
     console.log('Connected to existing Chrome instance');
 
     // Get the first context and page (or create a new one if needed)
@@ -101,8 +108,8 @@ async function bookTicket() {
                         await paymentTypeSelection(page, SCREEN_WAITING_TIME, TEN_SECOND);
                         break;
                     case url.includes('/jsp/surchargePaymentPage.jsp'):
-                        console.log('upiPamentPage:', url);
-                        await upiPamentPage(page, SCREEN_WAITING_TIME, TEN_SECOND);
+                        console.log('upiPaymentPage:', url);
+                        await upiPaymentPage(page, SCREEN_WAITING_TIME, TEN_SECOND);
                         break;
 
                     default:
@@ -118,8 +125,12 @@ async function bookTicket() {
         console.error("ERROR - SECTION 1 : Continue BTN CLick", error)
     }
 }
+/**
+ * Waits for the loader to be removed from the page.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function listenForPopup(page, selector, popupType, TEN_SECOND, SCREEN_WAITING_TIME) {
-    let isTrainSearchHandled = false;
     while (true) {
         await page.waitForSelector(selector, { state: 'attached', timeout: 0 });  // No timeout
         console.log(`✅ ${popupType} popup detected!`);
@@ -128,13 +139,17 @@ async function listenForPopup(page, selector, popupType, TEN_SECOND, SCREEN_WAIT
         console.log(`❌ ${popupType} popup closed!`);
         const currentUrl = page.url(); // Get the current URL
         if (currentUrl.includes("/train-search")) {
-            isTrainSearchHandled = false;
             console.log(`Currect URL: ${currentUrl} popup closed!`);
             await fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME);
         }
     }
 }
 
+/**
+ * Waits for the loader to be removed from the page.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function waitForLoaderRemove(page) {
     const preloader = page.locator('div#loader');
     console.log(`Loader detected!`);
@@ -144,9 +159,13 @@ async function waitForLoaderRemove(page) {
         await preloader.waitFor({ state: 'detached', timeout: 0 }); // Infinite wait
         console.log(`Loader closed!`);
     }
-
 }
 
+/**
+ * Waits for the loader to be removed from the page.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME) {
     try {
         await waitForLoaderRemove(page);
@@ -175,6 +194,11 @@ async function fillJourneyDetails(page, TEN_SECOND, SCREEN_WAITING_TIME) {
     }
 }
 
+/**
+ * Waits for the loader to be removed from the page.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function fillAndSelectAutocomplete(page, selector, value, timeout) {
     const autocomplete = page.locator(selector);
     await autocomplete.locator('input').fill(value, { timeout });
@@ -182,6 +206,11 @@ async function fillAndSelectAutocomplete(page, selector, value, timeout) {
     await autocomplete.locator('.ui-autocomplete-items li:first-child').click();
 }
 
+/**
+ * Waits for the loader to be removed from the page.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function selectDropdownOption(page, dropdownSelector, optionText, timeout) {
     // Open the dropdown
     await page.waitForSelector(`${dropdownSelector} div.ui-dropdown-trigger`, { timeout });
@@ -204,6 +233,11 @@ async function selectDropdownOption(page, dropdownSelector, optionText, timeout)
         }
     }
 }
+/**
+ * Waits for the loader to be removed from the page.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function selectDate(page) {
     const [targetDay, targetMonth, targetYear] = TRAVEL_DATE.split('/');
 
@@ -237,6 +271,11 @@ async function selectDate(page) {
     await page.click(daySelector);
 }
 
+/**
+ * Waits for the loader to be removed from the page.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function selectTrainCoach(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     try {
         await page.waitForURL('**\/train-list', { timeout: SCREEN_WAITING_TIME }); // 60 seconds
@@ -265,11 +304,15 @@ async function selectTrainCoach(page, SCREEN_WAITING_TIME, TEN_SECOND) {
 
     } catch (e) {
         log(`ERROR - SECTION : 2 - Select Train And Coach ${e}`);
-        console.log('------------------ Enter Mannualy Train Selection ------------------------------');
+        console.log('------------------ Enter Manually Train Selection ------------------------------');
     }
 }
 
-
+/**
+ * Waits for the loader to be removed from the page.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function fillLoginDetails(page, TEN_SECOND) {
     try {
 
@@ -277,25 +320,20 @@ async function fillLoginDetails(page, TEN_SECOND) {
 
         await page.fill('input[formcontrolname="userid"]', USERNAME, { timeout: TEN_SECOND });
         await page.fill('input[formcontrolname="password"]', PASSWORD, { timeout: TEN_SECOND });
-        if (!MANUAL_CAPTCHA) {
-            let isCaptchaResolved = await solveCaptcha(page, 1, TEN_SECOND);
-            if (isCaptchaResolved) {
-                await page.click('text=SIGN IN', { timeout: TEN_SECOND });
-                console.log('Success Login filled successfully.');
-            } else {
-                throw Error(' ------------------------- Fill Captcha Mannualy. ------ ');
-            }
-        } else {
-            console.log('------------------ Enter Mannualy Sign Form ------------------------------');
+        await solveCaptcha(page, 'text=SIGN IN', 1, TEN_SECOND);
 
-        }
     } catch (e) {
         log(`Error in fillLoginDetails: ${e}`);
-        console.error("ERROR - SECTION : 3 - Sign and Captch Solving");
-        console.log('------------------ Enter Mannualy Sign Form------------------------------');
+        console.error("ERROR - SECTION : 3 - Sign and Captcha Solving");
+        console.log('------------------ Enter Manually Sign Form------------------------------');
     }
 }
 
+/**
+ * Performs the passenger details filling process.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function passengersDetailsFilling(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     try {
 
@@ -349,29 +387,26 @@ async function passengersDetailsFilling(page, SCREEN_WAITING_TIME, TEN_SECOND) {
         console.log('------------------ Enter Mannualy Passengger Details ------------------------------');
     }
 }
-
+/**
+ * final booking detailsReview.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function bookingDetailsReview(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     try {
         await page.waitForURL("**\/booking/reviewBooking", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
-
-        if (!MANUAL_CAPTCHA) {
-            let isCaptchaResolved = await solveCaptcha(page, 2, TEN_SECOND);
-            if (isCaptchaResolved) {
-                await page.click('button[type="submit"]', { timeout: TEN_SECOND });
-                console.log('Clicked filled successfully.');
-            } else {
-                throw Error(' ------------------------- Fill Captcha Mannualy. ------ ');
-            }
-        } else {
-            console.log('------------------ Enter Mannualy Captcha Filling ------------------------------');
-        }
-
+        await solveCaptcha(page, 'button[type="submit"]', 2, TEN_SECOND);
     } catch (e) {
         console.error("ERROR - SECTION : 5 - Data View and Final Captcha Filling");
-        console.log('------------------ Enter Mannualy 2nd Captcha Filling ------------------------------');
+        console.warn('------------------ Enter Mannualy 2nd Captcha Filling ------------------------------');
     }
 }
 
+/**
+ * Payment Type Selection
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function paymentTypeSelection(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     try {
         await page.waitForURL("**\/payment/bkgPaymentOptions", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
@@ -396,8 +431,12 @@ async function paymentTypeSelection(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     }
 }
 
-
-async function upiPamentPage(page, SCREEN_WAITING_TIME, TEN_SECOND) {
+/**
+ * Handles the UPI payment process.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
+async function upiPaymentPage(page, SCREEN_WAITING_TIME, TEN_SECOND) {
     try {
         await page.waitForURL("**\/jsp/surchargePaymentPage.jsp", { timeout: SCREEN_WAITING_TIME }); // 60 seconds
 
@@ -431,50 +470,88 @@ async function upiPamentPage(page, SCREEN_WAITING_TIME, TEN_SECOND) {
         console.log('------------------ Enter Mannualy   Payment   ------------------------------');
     }
 }
-
-async function solveCaptcha(page, captchaNumber, TEN_SECOND) {
-    let isCaptchaResolved = true;
+/**
+ * Solves the captcha using the captchaFiller function.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
+async function solveCaptcha(page, selector, captchaNumber, TEN_SECOND) {
     let retry = 0;
+    const MAX_RETRIES = 3;
 
-    while (retry < 3) {
-        await captchaFiller(page, TEN_SECOND);
-
-        let element = null;
+    while (retry < MAX_RETRIES) {
         try {
-            // Wait for the error message, but catch timeout errors
-            await page.waitForSelector('.loginError', { timeout: 2000 });
-            element = await page.$('.loginError');
+
+            const captchaText = await captchaFiller(page, TEN_SECOND);
+
+            console.log(`Attempt ${retry + 1}: Filled captcha with text: ${captchaText}`);
+
+            // If manual captcha mode is enabled, just stop here
+            if (MANUAL_CAPTCHA) {
+                console.warn('------------------ Enter Manually Captcha Filling ------------------------------');
+                return true;
+            }
+
+            const captchaInput = await page.locator('input[name="captcha"]').first();
+            const value = await captchaInput.inputValue();
+            if (value && value.trim() !== '' && value === captchaText) {
+                await page.click(selector, { timeout: TEN_SECOND });
+                console.log('Clicked filled successfully.');
+
+            } else {
+                console.log(captchaNumber, 'CAPTCHA retry:', retry + 1);
+                retry++;
+                continue;
+            }
+
+            try {
+                // Check if there's an error message within a short timeout
+                await page.waitForSelector('.loginError', { timeout: 2000 });
+                const errorElement = await page.$('.loginError');
+                if (errorElement) {
+                    const errorText = await page.evaluate(el => el.textContent, errorElement);
+                    if (errorText.includes('Invalid Captcha....')) {
+                        console.log(`${captchaNumber} CAPTCHA failed. Retry: ${retry + 1}`);
+                        retry++;
+                        continue;
+                    } else {
+                        // Some other error occurred
+                        console.warn(`Error detected but not related to captcha: ${errorText}`);
+                        return false;
+                    }
+                }
+            } catch (error) {
+                // No error message appeared within the timeout period
+                // This suggests the captcha was successful
+                console.log('CAPTCHA solved successfully.');
+                return true;
+            }
+            return true;
         } catch (error) {
-            if (error.name === 'TimeoutError') {
-                // No error message appeared, assume captcha is correct
-                isCaptchaResolved = true;
-                break;
-            }
-            throw error; // Re-throw unexpected errors
-        }
+            console.error(`Error during captcha solving attempt ${retry + 1}:`, error);
+            retry++;
 
-        if (element) {
-            const text = await page.evaluate(el => el.textContent, element);
-            if (!text.includes('Invalid Captcha....')) {
-                isCaptchaResolved = true;
-                break;
+            if (retry >= MAX_RETRIES) {
+                console.error('Maximum retry attempts reached for captcha solving.');
+                return false;
             }
         }
-
-        isCaptchaResolved = false;
-        console.log(captchaNumber, 'CAPTCHA retry:', retry + 1);
-        retry++;
     }
-
-    return isCaptchaResolved;
+    // If we exit the loop due to max retries
+    return false;
 }
 
+/**
+ * Fills the captcha using the captchaFiller function.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function captchaFiller(page, TEN_SECOND) {
     try {
         try {
             await page.waitForSelector('img.captcha-img', { timeout: TEN_SECOND });
         } catch (error) {
-            await page.locator(`a[aria-label="Click to refresh Captcha"]`).first().click;
+            await page.locator(`a[aria-label="Click to refresh Captcha"]`).first().click();
         }
         const captchaImage = await page.locator('img.captcha-img').first();
         const captchaUrl = await captchaImage.getAttribute('src');
@@ -484,13 +561,18 @@ async function captchaFiller(page, TEN_SECOND) {
 
         const captchaInput = await page.locator('input[name="captcha"]').first();
         await captchaInput.fill(captchaText, { timeout: TEN_SECOND });
+        return captchaText;
     } catch (error) {
         log(`Captha Failed captchaFiller: ${error}`);
         console.error("Captha Failed captchaFiller")
     }
 }
 
-
+/**
+ * Adds passengers to the booking form.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function addPassengers(page, passengers, TEN_SECOND) {
     try {
         console.log(passengers);
@@ -517,7 +599,11 @@ async function addPassengers(page, passengers, TEN_SECOND) {
 }
 
 
-// / Helper function to fill passenger data
+/**
+ * Fills the passenger data in the form.
+ * 
+ * @param {import('playwright').Page} page - The Playwright Page object.
+ */
 async function fillPassengerData(passengerForm, data, TEN_SECOND) {
     // Fill the name input field
     const passengerName = await passengerForm.locator('input[placeholder="Name"]').first();
