@@ -64,8 +64,8 @@ export async function waitForTatkalOpen(TRAIN_COACH) {
 async function bookTicket() {
 
     // // Launch the browser
-    // Example: google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-irctc //  allow  use different profile bcz irctc can block while login
-    const browser = await chromium.connectOverCDP('http://localhost:9223');
+    // Example: google-chrome --remote-debugging-port=9224 --user-data-dir=/tmp/chrome-345 //  allow  use different profile bcz irctc can block while login
+    const browser = await chromium.connectOverCDP('http://localhost:9224');
 
     console.log('Connected to existing Chrome instance');
 
